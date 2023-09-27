@@ -1,0 +1,8 @@
+{
+  "common": {
+    "storeApp": "Store App"
+  },
+  "auth": {
+    "signIn": "Вход"
+  }
+}

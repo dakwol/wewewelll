@@ -1,0 +1,21 @@
+{
+  "common": {
+    "storeApp": "Store App"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "orContinueWith": "Or continue with",
+    "notAMember": "Not a member?",
+    "registerNow": "Register now",
+    "register": "Register",
+    "backToLogin": "back to login"
+  },
+  "input": {
+    "phone": "Enter your phone",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "verifyPassword": "Verify password"
+
+  }
+}
