@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.white,
         borderRadius: 20,
         paddingVertical: 24,
-        paddingHorizontal: 16
+        paddingHorizontal: 16,
     },
     containerHeader: {
         flexDirection: "row",

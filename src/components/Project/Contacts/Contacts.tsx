@@ -3,7 +3,8 @@ import { Image, Text, View, TextInput, FlatList, StyleSheet } from 'react-native
 import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
 import { colors } from '../../../constants/colors';
 import SwipeModalComponent from '../../UI/SwipeUpDownModal/SwipeUpDownModal';
-import { request, PERMISSIONS } from 'react-native-permissions';
+import { request, PERMISSIONS, check } from 'react-native-permissions';
+
 import Contacts from 'react-native-contacts';
 import ImageComponent from '../ImageComponent/ImageComponent';
 import { meetinsUser } from '../../../api/Preferences copy/MeetinsUser/MeetinsUser';
@@ -13,6 +14,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { MeetinsCreate } from '../../../api/Preferences copy/MeetinsCreate/MeetinsCreate';
 import { useNavigation } from '@react-navigation/native';
 import { SCREENS } from '../../../navigation/screenName';
+
 
 interface Contact {
   recordID: string;
@@ -26,34 +28,71 @@ const ContPhone = ({onClose}:any) => {
   const [selectedUser, setSelectedUser] = useState<any>();
   const [modalVisible, setModalVisible] = useState(false);
   const [error, setError] = useState(false);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contactsArray, setContacts] = useState<Contact[]>([]);
   const [searchResults, setSearchResults] = useState<Contact[]>([]);
   const [dataNewMeeting, setDataNewMeeting] = useState<any>({});
+  const [searchDataPhone, setSearchDataPhone] = useState<any>([]);
+  const [update, setUpdate] = useState<boolean>(false);
 
   useEffect(() => {
-    request(PERMISSIONS.ANDROID.READ_CONTACTS)
-      .then((result:any) => {
-        if (result === 'granted') {
-          // Разрешения предоставлены, теперь вы можете получить контакты
-          Contacts.getAll()
-            .then((contacts) => {
-              setContacts(contacts);
-            })
-            .catch((error) => {
-              console.error('Ошибка при получении контактов: ', error);
+    const checkAndLoadContacts = async () => {
+      try {
+        const status = await check(PERMISSIONS.ANDROID.READ_CONTACTS);
+        if (status === 'granted') {
+          const contacts = await Contacts.getAll();
+          if (contacts && contacts.length > 0) {
+            const phoneNumberArray = contacts
+              .filter((contact) => contact.phoneNumbers && contact.phoneNumbers.length > 0)
+              .map((contact) => {
+                const phoneNumberObject = contact.phoneNumbers[0];
+                if (phoneNumberObject && phoneNumberObject.number) {
+                  const phoneNumber = phoneNumberObject.number.replace(/\D/g, '');
+                  return `+7 ${phoneNumber.slice(1, 4)} ${phoneNumber.slice(4, 7)}-${phoneNumber.slice(7, 9)}-${phoneNumber.slice(9, 11)}`;
+                }
+                return null;
+              });
+  
+            getUserPhone('post', phoneNumberArray).then((resp)=>{
+              if(resp.success){
+              setSearchDataPhone(resp.data);
+    
+              const filteredContacts = contacts.filter((contact) => {
+                const phoneNumberObject = contact.phoneNumbers[0];
+                if (phoneNumberObject && phoneNumberObject.number) {
+                  const phoneNumber = phoneNumberObject.number.replace(/\D/g, '');
+                  return searchDataPhone.includes(`+7 ${phoneNumber.slice(1, 4)} ${phoneNumber.slice(4, 7)}-${phoneNumber.slice(7, 9)}-${phoneNumber.slice(9, 11)}`);
+                  }
+                  return false;
+                });
+                setContacts(filteredContacts);
+                
+                } else {
+                  setContacts(contacts)
+                }
+                setUpdate(true)
             });
-        } else {
+         
+          } else {
+            console.log('Контакты не найдены.');
+          }
+        } else if (status === 'denied') {
           console.log('Разрешения на доступ к контактам не предоставлены');
+        } else if (status === 'blocked') {
+          console.error('Ошибка при запросе разрешений');
         }
-      })
-      .catch((error) => {
-        console.error('Ошибка при запросе разрешений: ', error);
-      });
-  }, []);
+      } catch (error) {
+        console.error('Ошибка при получении контактов: ', error);
+      }
+    };
+  
+    checkAndLoadContacts();
+  }, [update]);
+
+  
 
   // Функция для фильтрации контактов на основе текста поиска
   const filterContacts = (searchQuery: string) => {
-    const filteredContacts = contacts.filter((contact) => {
+    const filteredContacts = contactsArray.filter((contact) => {
       const fullName = `${contact.givenName} ${contact.familyName}`;
       return fullName.toLowerCase().includes(searchQuery.toLowerCase());
     });
@@ -253,7 +292,7 @@ const ContPhone = ({onClose}:any) => {
                 )
               })
             ) : ( // В противном случае, отображать все контакты
-              contacts.map((item:any) => {
+            contactsArray.map((item:any) => {
                 return (
                   <TouchableOpacity
                     key={item.recordID}

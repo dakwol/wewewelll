@@ -25,7 +25,7 @@ const ErrorMessageModal: FC<ErrorMessageProps> = ({ isVisible, title, onClose })
     }, [isVisible, onClose]);
 
     return isVisible &&
-        <View style={{width: SCREEN_WIDTH, height: 400,position: 'absolute', zIndex: 100000, backgroundColor: colors.lgGray, borderColor: "red", borderWidth: 1, bottom: 20, borderRadius: 20, padding: 20, }}>
+        <View style={{width: SCREEN_WIDTH, position: 'absolute', zIndex: 100000, backgroundColor: colors.lgGray, borderColor: "red", borderWidth: 1, bottom: 20, borderRadius: 20, padding: 20, }}>
         <Text style={{color: 'red'}}>{ title }</Text>
         </View>
 };

@@ -11,11 +11,8 @@ export const getUserPhone = async (type: string, phone?: any) => {
     const resp = type === 'get' ?
         await axiosClient.get(methodUrl + '/' + phone)
         :
-        await axiosClient.post(methodUrl, { 'phoneNumber': phone })
+        await axiosClient.post(methodUrl, phone)
 
-    console.log('====================================');
-    console.log('ddd', resp);
-    console.log('====================================');
     if (resp) {
         return { "success": true, data: resp };
     } else {

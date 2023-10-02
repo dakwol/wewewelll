@@ -79,15 +79,11 @@ const AuthPhoneScreen = () => {
       
     }
 
-    
-  
     const navigateToReg = () => { 
         //@ts-ignore
          navigation.navigate(SCREENS.AuthRegistationPhone);
     }
     
-  
-  
   return (
     <View>
       {isErr && <ErrorMessageModal isVisible={isErr} title={isSms} onClose={()=>{setIsErr(false)}}/>}

@@ -1,10 +1,7 @@
 import axios from 'axios';
 import queryString from 'query-string';
 import apiConfig from './apiConfig';
-import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SCREENS } from '../navigation/screenName';
-import { useNavigation } from '@react-navigation/native';
 import { login } from '../redux/actions/authActions';
 import { logoutUser } from '../redux/actions/userActions';
 import store from '../redux/store';
@@ -14,21 +11,24 @@ const axiosClient = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    paramsSerializer: params => queryString.stringify({ ...params, api_key: apiConfig.apiKey })
+    paramsSerializer: (params) =>
+        queryString.stringify({ ...params, api_key: apiConfig.apiKey }),
 });
-axiosClient.interceptors.request.use((config) => {
-    // Добавляем проверку на тип данных, который отправляем
+
+axiosClient.interceptors.request.use(async (config) => {
+    // Check if the request data is FormData
     if (config.data instanceof FormData) {
         config.headers['Content-Type'] = 'multipart/form-data';
     }
 
-    // Получаем токен из AsyncStorage
-    return AsyncStorage.getItem('token').then((userToken) => {
-        if (userToken) {
-            config.headers['Authorization'] = `Bearer ${userToken}`;
-        }
-        return config;
-    });
+    // Get the user token from AsyncStorage
+    const userToken = await AsyncStorage.getItem('token');
+
+    if (userToken) {
+        config.headers['Authorization'] = `Bearer ${userToken}`;
+    }
+
+    return config;
 });
 
 axiosClient.interceptors.response.use(
@@ -38,54 +38,53 @@ axiosClient.interceptors.response.use(
         }
         return response;
     },
-    (error) => {
-        if (error.response && (error.response.status === 500 || error.response.status === 401 || error.response.status === 400)) {
-            console.error('Получена ошибка 401. Токен, возможно, истек.');
+    async (error) => {
+        if (error.response && error.response.status === 401) {
+            console.error('Received a 401 error. Token may have expired.');
 
-            // Реализуйте здесь логику обновления токена
-            const refreshToken = AsyncStorage.getItem('refreshToken');
-            const token = AsyncStorage.getItem('token');
+            try {
+                // Retrieve the refresh token and current token from AsyncStorage
+                const refreshToken = await AsyncStorage.getItem('refreshToken');
+                const token = await AsyncStorage.getItem('token');
 
-            return Promise.all([refreshToken, token])
-                .then(([refreshToken, token]) => {
-                    const tokenData = {
-                        accessToken: token,
-                        refreshToken: refreshToken,
-                    };
+                const tokenData = {
+                    accessToken: token,
+                    refreshToken: refreshToken,
+                };
 
-                    return axios.post(
-                        `${apiConfig.baseUrl}/tokens/refresh`,
-                        tokenData
-                    ).then((refreshedTokenResponse) => {
-                        if (
-                            refreshedTokenResponse.data &&
-                            refreshedTokenResponse.data.token
-                        ) {
-                            // Обновите userToken в AsyncStorage и заголовках Axios
-                            const newAccessToken = refreshedTokenResponse.data.token;
-                            const newRefreshToken = refreshedTokenResponse.data.refreshToken;
-                            AsyncStorage.setItem('token', newAccessToken);
-                            AsyncStorage.setItem('refreshToken', newRefreshToken);
-                            axios.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+                const refreshedTokenResponse = await axios.post(
+                    `${apiConfig.baseUrl}/tokens/refresh`,
+                    tokenData
+                );
 
-                            // Повторите исходный запрос
-                            return axios.request(error.config);
-                        } else {
-                            console.error('Ошибка обновления токена.');
-                            // Перенаправьте пользователя или выполните выход из системы по необходимости
-                            // dispatch(login(''));
-                            // dispatch(logoutUser());
-                        }
-                    });
-                }).catch((refreshError) => {
-                    console.error('Ошибка обновления токена:', refreshError);
-                    // Перенаправьте пользователя или выполните выход из системы по необходимости
+                if (
+                    refreshedTokenResponse.data &&
+                    refreshedTokenResponse.data.token
+                ) {
+                    // Update userToken in AsyncStorage and Axios headers
+                    const newAccessToken = refreshedTokenResponse.data.token;
+                    const newRefreshToken = refreshedTokenResponse.data.refreshToken;
+                    await AsyncStorage.setItem('token', newAccessToken);
+                    await AsyncStorage.setItem('refreshToken', newRefreshToken);
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+
+                    // Retry the original request
+                    return axios.request(error.config);
+                } else {
+                    console.error('Error refreshing token.');
+                    // Redirect the user or log them out as needed
                     store.dispatch(login(''));
                     store.dispatch(logoutUser());
-                });
+                }
+            } catch (refreshError) {
+                console.error('Error refreshing token:', refreshError);
+                // Redirect the user or log them out as needed
+                store.dispatch(login(''));
+                store.dispatch(logoutUser());
+            }
         }
 
-        // Для других ошибок перекидываем ошибку дальше
+        // For other errors, propagate the error
         return Promise.reject(error);
     }
 );

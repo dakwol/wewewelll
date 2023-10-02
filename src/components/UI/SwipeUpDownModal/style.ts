@@ -17,8 +17,8 @@ export const style = StyleSheet.create({
     modalBg: {
         width: SCREEN_WIDTH,
         height: SCREEN_HEIGHT,
-        backgroundColor: colors.black,
-        opacity: .1
+        backgroundColor: '#9F9F9F',
+        opacity: 1
     },
     modalContent: {
         padding: 20,

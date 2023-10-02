@@ -10,6 +10,8 @@ import { useSelector } from 'react-redux'
 import ImageComponent from '../../components/Project/ImageComponent/ImageComponent'
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps'; 
 import { MeetinsUpdate } from '../../api/Preferences copy/MeetinsUpdate/MeetinsUpdate'
+import {dateUtils} from '../../components/UI/functions/functions'
+
 
 
 const InviteScreen  = () => {
@@ -42,16 +44,21 @@ const InviteScreen  = () => {
         
     }
 
+    console.log('====================================');
+    console.log('dataInvite', dataInvite);
+    console.log('====================================');
+
     const goBack = () => {
         navigation.goBack(); // Function to navigate back
       };
+      
   return (
     
     <View style={styles.containerInviteScreen}>
         <TouchableOpacity style={styles.backButton} onPress={()=>goBack()}>
             <Image source={BackIcon}></Image>
         </TouchableOpacity>
-        <Image source={dataInvite.place.url != null ? {uri:dataInvite.place.url} : {uri:SlideOne}} style={styles.bgImage}/>
+        <Image source={dataInvite.place.url != null ? {uri:dataInvite.place.url} : {uri:''}} style={styles.bgImage}/>
         
         <ScrollView style={styles.contentContainer}>
  
@@ -61,7 +68,7 @@ const InviteScreen  = () => {
                     <Text style={styles.nameText}>{dataInvite.guest.id !== user.id? dataInvite.guest.name : dataInvite.creator.name}</Text>
                 </View>
                 <View style={styles.containerDate}>
-                    <Text style={styles.dateInfo}>{dataInvite.date}</Text>
+                    <Text style={styles.dateInfo}>{dateUtils.formatDateAndTime(dataInvite.date)}</Text>
                     <Text style={styles.dateInfo}>{dataInvite.place.minDurationHours} - {dataInvite.place.maxDurationHours} часа</Text>
                 </View>
             </View>
@@ -82,7 +89,7 @@ const InviteScreen  = () => {
                 <View>
                 <MapView
                     provider={PROVIDER_GOOGLE} // remove if not using Google Maps
-                        style={{width: "100%", height: 190, borderRadius: 22, marginTop: 12}}
+                        style={{width: "100%", height: 190, borderRadius: 22, marginTop: 12, marginBottom: 150}}
                         region={{
                             latitude: 37.78825,
                             longitude: -122.4324,
@@ -94,7 +101,7 @@ const InviteScreen  = () => {
                 </View>
             </View>
         </ScrollView>
-        {(dataInvite.status === 'Waiting' || dataInvite.status === 'Invited') &&
+        {(dataInvite.status === 'Invited') &&
             <View style={[styles.footerButtonContainer, !myInvite&& {width: '100%'}]}>
                 {!myInvite &&
                     <TouchableOpacity 

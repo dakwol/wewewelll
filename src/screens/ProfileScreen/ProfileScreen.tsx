@@ -17,6 +17,7 @@ import ImageComponent from '../../components/Project/ImageComponent/ImageCompone
 import { logoutUser } from '../../redux/actions/userActions';
 import { colors } from '../../constants/colors';
 import BlurImage from '../../components/UI/BlurImage/BlurImage';
+import {dateUtils} from '../../components/UI/functions/functions';
 
 interface MeetingData {
   img: any; // Replace 'any' with the correct type for your image source
@@ -69,29 +70,30 @@ const ProfileScreen = (dataMeeting:any) => {
     if (dataMeetingApi.length === 0) {
       return; // Нет данных, нет смысла продолжать
     }
-
+  
     // Создаем объект для подсчета упоминаний
     const idCount: { [id: string]: number } = {};
     let mostFrequentId = '';
     let maxCount = 0;
-
+  
     // Проходим по массиву dataMeetingApi
-    dataMeetingApi.forEach((item:any) => {
-     if(item?.creator?.id != user.id){
-       // Увеличиваем счетчик для item.creator.id
-       if (item.creator.id in idCount) {
-        idCount[item.creator.id]++;
-      } else {
-        idCount[item.creator.id] = 1;
+    dataMeetingApi.forEach((item: any) => {
+      if (user.id == item.creator.id) {
+        // Если пользователь был создателем
+        if (item.guest.id in idCount) {
+          idCount[item.guest.id]++;
+        } else {
+          idCount[item.guest.id] = 1;
+        }
+      } else if (user.id == item.guest.id) {
+        // Если пользователь был гостем
+        if (item.creator.id in idCount) {
+          idCount[item.creator.id]++;
+        } else {
+          idCount[item.creator.id] = 1;
+        }
       }
-
-      // Увеличиваем счетчик для item.guest.id
-      if (item.guest.id in idCount) {
-        idCount[item.guest.id]++;
-      } else {
-        idCount[item.guest.id] = 1;
-      }
-
+  
       // Находим id с наибольшим счетчиком
       for (const id in idCount) {
         if (idCount[id] > maxCount) {
@@ -99,18 +101,26 @@ const ProfileScreen = (dataMeeting:any) => {
           maxCount = idCount[id];
         }
       }
-     }
     });
-    // Теперь, когда мы нашли наиболее часто встречающийся id, устанавливаем leaderMeeting
+  
+    // Теперь, когда мы нашли наиболее часто упоминаемого пользователя (лидера), устанавливаем leaderMeeting
     const leaderMeetingItem = dataMeetingApi.find(
-      (item:any) => item.guest.id == mostFrequentId
+      (item: any) =>
+        (user.id == item.creator.id && mostFrequentId == item.guest.id) ||
+        (user.id == item.guest.id && mostFrequentId == item.creator.id)
     );
-
-    console.log('leader',leaderMeetingItem);
-    
-
-    setLeaderMeeting(leaderMeetingItem?.creator);
+  
+    console.log('leader', leaderMeetingItem);
+  
+    setLeaderMeeting(
+      user.id === leaderMeetingItem?.creator.id
+        ? leaderMeetingItem?.guest
+        : leaderMeetingItem?.creator
+    );
   }, [dataMeetingApi, user]);
+  
+  
+  
 
   const handleOpenImagePicker = () => {
     if (imagePickerRef.current) {
@@ -188,23 +198,27 @@ const ProfileScreen = (dataMeeting:any) => {
                   <BlurImage
                       resizeMode={"cover"}
                       resizeMethod={"resize"}
-                      media={item.place.url != null? {uri: item.place.url } : {uri: SlideOne}}
+                      media={item.place.url != null? {uri: item.place.url } : {uri: ''}}
                       blur={true}
                       style={styles.meetingBg}
                   />
                   <View style={styles.rightItemMeeting}>
                     <ImageComponent source={{uri:myInvite? item.guest.url : item?.creator?.url}} style={styles.meetingAvatar}/>
-                    <View>
-                      <Text style={{color: '#fff'}}>{myInvite? item.guest.name : item?.creator?.name}</Text>
-                      <Text style={{color: '#fff'}}>{item.place.name}</Text>
-                    </View>
+                    <View style={{ maxWidth: 140, overflow: 'hidden' }}>
+                    <Text style={{ color: '#fff' }} numberOfLines={1} ellipsizeMode="tail">
+                      {myInvite ? item.guest.name : item?.creator?.name}
+                    </Text>
+                    <Text style={{ color: '#fff' }} numberOfLines={1} ellipsizeMode="tail">
+                      {item.place.name}
+                    </Text>
+                  </View>
                   </View>
                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <View>
-                      <Text style={{color: '#fff'}}>{item.date}</Text>
-                      <Text style={{color: '#fff'}}>{item.time}</Text>
+                    <View style={{justifyContent: 'flex-end', alignItems: 'flex-end'}}>
+                      <Text style={{color: '#fff'}}>{dateUtils.formatDateWithDayOfWeek(item.date)}</Text>
+                      <Text style={{color: '#fff'}}>{dateUtils.extractTimeFromDateTime(item.date)}</Text>
                     </View>
-                    <Image source={ArrowDown}></Image>
+                    <Image source={ArrowDown} style={{marginLeft: 12}}></Image>
                   </View>
                 </TouchableOpacity>
               )
